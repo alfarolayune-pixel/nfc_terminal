@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Pro - Tinta & Pixel</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #111827;
+            --accent: #10b981;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card);
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+        .header h1 { margin: 0; font-size: 1.5rem; }
+        .header p { margin: 6px 0 0; font-size: 0.8rem; opacity: 0.8; }
+
+        .nav {
+            display: flex;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .nav-item {
+            flex: 1;
+            padding: 15px 5px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-item.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: white;
+        }
+
+        .content { padding: 24px; }
+        .view { display: none; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 0.9rem; }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn:hover { background: var(--primary-hover); }
+        .btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .status.success { background: #ecfdf5; color: #065f46; display: block; border: 1px solid #a7f3d0; }
+        .status.error { background: #fef2f2; color: #991b1b; display: block; border: 1px solid #fecaca; }
+
+        /* Historial */
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .transaction-item:last-child { border-bottom: none; }
+        .t-info { display: flex; flex-direction: column; gap: 2px; }
+        .t-name { font-weight: 600; font-size: 0.9rem; }
+        .t-date { font-size: 0.75rem; color: #6b7280; }
+        .t-amount { font-weight: 700; color: var(--primary); }
+
+        /* Log de diagnóstico */
+        #diagnostics-log {
+            margin-top: 20px;
+            background: #111827;
+            color: #10b981;
+            padding: 12px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 2px solid #374151;
+        }
+
+        /* === HISTORIAL DASHBOARD === */
+        .hist-loading { text-align: center; padding: 24px; color: #6b7280; font-size: 0.9rem; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .summary-card {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            border-radius: 14px;
+            padding: 18px 14px;
+            text-align: center;
+        }
+        .summary-card.green { background: linear-gradient(135deg, #10b981, #059669); }
+        .summary-card .s-value { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+        .summary-card .s-label { font-size: 0.72rem; opacity: 0.85; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #9ca3af;
+            margin: 18px 0 10px;
+        }
+
+        .top-products-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+        .top-product-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 10px 14px;
+            border: 1px solid #f3f4f6;
+        }
+        .rank-badge {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            color: #374151;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .rank-badge.gold   { background: #fbbf24; color: #78350f; }
+        .rank-badge.silver { background: #d1d5db; color: #374151; }
+        .rank-badge.bronze { background: #d97706; color: #fff; }
+        .p-info { flex: 1; min-width: 0; }
+        .p-name { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .p-sales { font-size: 0.72rem; color: #9ca3af; margin-top: 1px; }
+        .p-total { font-weight: 700; color: #4f46e5; font-size: 0.9rem; white-space: nowrap; }
+
+        .tx-list { display: flex; flex-direction: column; gap: 6px; }
+        .tx-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 14px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 3px solid #10b981;
+            border: 1px solid #f3f4f6;
+            border-left: 3px solid #10b981;
+        }
+        .tx-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .tx-name { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tx-meta { font-size: 0.7rem; color: #9ca3af; }
+        .tx-price { font-weight: 800; color: #4f46e5; font-size: 0.95rem; white-space: nowrap; margin-left: 10px; }
+
+        .empty-state { text-align: center; padding: 30px 10px; color: #9ca3af; font-size: 0.9rem; }
+        .hist-refresh {
+            width: 100%;
+            margin-top: 16px;
+            padding: 11px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 10px;
+            background: white;
+            color: #6b7280;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .hist-refresh:hover { border-color: #4f46e5; color: #4f46e5; background: #eef2ff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>💳 NFC Pro System</h1>
+        <p>Tinta &amp; Pixel · Modo Producción</p>
+    </div>
+    <div class="nav">
+        <div class="nav-item active" onclick="switchTab('sale')">Cobro</div>
+        <div class="nav-item" onclick="switchTab('top')">Saldo</div>
+        <div class="nav-item" onclick="switchTab('reg')">Admin</div>
+        <div class="nav-item" onclick="switchTab('hist'); loadHist()">Historial</div>
+    </div>
+    <div class="content">
+        <!-- VISTA COBRO -->
+        <div id="view-sale" class="view active">
+            <div class="form-group">
+                <label>Seleccionar Producto</label>
+                <select id="sel-products">
+                    <option value="">Cargando productos...</option>
+                </select>
+            </div>
+            <button class="btn" onclick="executeAction('sale')">📡 Cobrar con NFC</button>
+            <div id="status-sale" class="status"></div>
+        </div>
+
+        <!-- VISTA SALDO -->
+        <div id="view-top" class="view">
+            <div class="form-group">
+                <label>Monto a Recargar ($)</label>
+                <input type="number" id="inp-amount" value="100" min="1">
+            </div>
+            <button class="btn" onclick="executeAction('topup')" style="background:var(--accent)">💰 Recargar con NFC</button>
+            <div id="status-top" class="status"></div>
+        </div>
+
+        <!-- VISTA ADMIN -->
+        <div id="view-reg" class="view">
+            <div class="form-group">
+                <label>Nombre del Nuevo Cliente</label>
+                <input type="text" id="inp-name" placeholder="Ej: Joel Alfaro">
+            </div>
+            <button class="btn" onclick="executeAction('register')" style="background:#111827">📝 Registrar Pulsera</button>
+            <div id="status-reg" class="status"></div>
+        </div>
+
+        <!-- VISTA HISTORIAL -->
+        <div id="view-hist" class="view">
+            <div id="hist-list">Cargando transacciones...</div>
+        </div>
+
+        <!-- LOG DE DIAGNÓSTICO -->
+        <div id="diagnostics-log">
+            <div>[SISTEMA] Listo para producción.</div>
+        </div>
+    </div>
+</div>
+<script>
+    // ─── CONFIGURACIÓN HARDCODEADA (NO EDITAR EN PRODUCCIÓN) ───────────────────
+    const CONFIG = {
+        host:   'https://joel-inadaptados.oph.st',
+        mode:   'webhook',          // producción: 'webhook' | test: 'webhook-test'
+        apiKey: 'mi-secreto-nfc'
+    };
+    // ────────────────────────────────────────────────────────────────────────────
+
+    function getN8nUrl(endpoint) {
+        return `${CONFIG.host}/${CONFIG.mode}/${endpoint}?api_key=${CONFIG.apiKey}`;
+    }
+
+    // Audio Context para el Bip
+    function playBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        } catch(e) { console.error("Audio error", e); }
+    }
+
+    function switchTab(t) {
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.getElementById('view-' + t).classList.add('active');
+    }
+
+    function diagLog(msg) {
+        const log = document.getElementById('diagnostics-log');
+        const time = new Date().toLocaleTimeString();
+        log.innerHTML += `<div>[${time}] ${msg}</div>`;
+        log.scrollTop = log.scrollHeight;
+        console.log(msg);
+    }
+
+    async function loadProducts() {
+        const url = getN8nUrl('products-pro-v2');
+        diagLog(`🔍 Cargando productos...`);
+        try {
+            const res = await fetch(url);
+            diagLog(`📡 Productos: HTTP ${res.status}`);
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const data = await res.json();
+            const select = document.getElementById('sel-products');
+            if (!data || data.length === 0) {
+                diagLog("⚠️ La lista de productos está vacía en la base de datos.");
+                select.innerHTML = '<option value="">Sin productos disponibles</option>';
+            } else {
+                diagLog(`✅ ${data.length} productos cargados.`);
+                select.innerHTML = data.map(p => `<option value="${p.id}">${p.nombre} ($${p.precio})</option>`).join('');
+            }
+        } catch(e) {
+            diagLog(`❌ Error cargando productos: ${e.message}`);
+            document.getElementById('sel-products').innerHTML = '<option value="">Error cargando productos</option>';
+        }
+    }
+
+    async function loadHist() {
+        const url = getN8nUrl('transactions-pro-v2');
+        const list = document.getElementById('hist-list');
+        list.innerHTML = '<div class="hist-loading">📡 Cargando historial...</div>';
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Status ' + res.status);
+            const text = await res.text();
+            if (!text) {
+                list.innerHTML = '<div class="empty-state">📭 Aún no hay transacciones registradas.</div>';
+                return;
+            }
+            const data = JSON.parse(text);
+            if (!Array.isArray(data) || data.length === 0) {
+                list.innerHTML = '<div class="empty-state">📭 No hay transacciones aún.</div>';
+                return;
+            }
+
+            // ── Resumen del día ───────────────────────────────────────────
+            const today = new Date().toDateString();
+            const todayTx = data.filter(t => new Date(t.fecha || t.created_at).toDateString() === today);
+            const totalHoy = todayTx.reduce((s, t) => s + Number(t.precio || 0), 0);
+
+            // ── Top productos (de toda la muestra) ────────────────────────
+            const productMap = {};
+            data.forEach(t => {
+                const name = t.product_name || t.nombre_producto || 'Sin nombre';
+                if (!productMap[name]) productMap[name] = { count: 0, total: 0 };
+                productMap[name].count++;
+                productMap[name].total += Number(t.precio || 0);
+            });
+            const topProducts = Object.entries(productMap)
+                .sort((a, b) => b[1].count - a[1].count)
+                .slice(0, 3);
+            const rankClass = i => ['gold', 'silver', 'bronze'][i] || '';
+            const rankIcon  = i => ['🥇', '🥈', '🥉'][i] || (i + 1);
+
+            // ── Render ─────────────────────────────────────────────────────
+            list.innerHTML = `
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="s-value">$${totalHoy.toFixed(2)}</div>
+                        <div class="s-label">Ventas de hoy</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="s-value">${todayTx.length}</div>
+                        <div class="s-label">Transacciones hoy</div>
+                    </div>
+                </div>
+
+                ${topProducts.length > 0 ? `
+                <div class="section-title">🏆 Productos más vendidos</div>
+                <div class="top-products-list">
+                    ${topProducts.map(([name, info], i) => `
+                        <div class="top-product-item">
+                            <div class="rank-badge ${rankClass(i)}">${rankIcon(i)}</div>
+                            <div class="p-info">
+                                <div class="p-name">${name}</div>
+                                <div class="p-sales">${info.count} venta${info.count !== 1 ? 's' : ''}</div>
+                            </div>
+                            <div class="p-total">$${info.total.toFixed(2)}</div>
+                        </div>
+                    `).join('')}
+                </div>` : ''}
+
+                <div class="section-title">🕒 Últimas transacciones</div>
+                <div class="tx-list">
+                    ${data.map(t => {
+                        const fecha   = new Date(t.fecha || t.created_at || Date.now());
+                        const timeStr = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const dateStr = fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+                        const uid     = t.nfc_uid ? t.nfc_uid.slice(0, 10) + '…' : 'N/A';
+                        return `
+                        <div class="tx-item">
+                            <div class="tx-left">
+                                <span class="tx-name">${t.product_name || t.nombre_producto || 'Compra'}</span>
+                                <span class="tx-meta">🪪 ${uid} &nbsp;·&nbsp; ${dateStr} ${timeStr}</span>
+                            </div>
+                            <span class="tx-price">$${Number(t.precio || 0).toFixed(2)}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+
+                <button class="hist-refresh" onclick="loadHist()">🔄 Actualizar historial</button>
+            `;
+            diagLog(`✅ Historial cargado: ${data.length} registros. Hoy: ${todayTx.length} txs.`);
+        } catch(e) {
+            diagLog(`❌ Error en historial: ${e.message}`);
+            list.innerHTML = `<div class="empty-state">❌ Sin conexión. Revisa n8n.</div>`;
+        }
+    }
+
+    async function executeAction(action) {
+        let payload = {};
+        const view = action === 'topup' ? 'top' : (action === 'register' ? 'reg' : 'sale');
+
+        // Validar inputs según la acción
+        if (action === 'register') {
+            payload.nombre = document.getElementById('inp-name').value;
+            if (!payload.nombre) return alert("Nombre requerido");
+        } else if (action === 'topup') {
+            payload.monto = document.getElementById('inp-amount').value;
+            if (!payload.monto) return alert("Monto requerido");
+        } else if (action === 'sale') {
+            payload.product_id = document.getElementById('sel-products').value;
+            if (!payload.product_id) return alert("Selecciona un producto");
+        }
+
+        let uid = "";
+        diagLog(`🔍 Iniciando acción: ${action}`);
+        showMsg(view, 'success', '📱 Esperando NFC... Acerque la pulsera');
+
+        // Lectura NFC con protección y fallback manual
+        try {
+            if ("NDEFReader" in window) {
+                diagLog("📡 Lector NFC detectado, iniciando escaneo...");
+                const ndef = new NDEFReader();
+                await ndef.scan();
+
+                uid = await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => {
+                        diagLog("⚠️ Tiempo de espera NFC agotado.");
+                        reject(new Error("Timeout"));
+                    }, 15000);
+
+                    ndef.onreading = event => {
+                        clearTimeout(timer);
+                        diagLog("✅ Tag detectado!");
+                        resolve(event.serialNumber);
+                    };
+
+                    if (confirm("¿Deseas ingresar el ID manualmente (Simulación)?")) {
+                        clearTimeout(timer);
+                        resolve(prompt("ID Manual:", "card-pro-1"));
+                    }
+                });
+            } else {
+                diagLog("⚠️ Navegador no soporta NDEFReader, usando simulación.");
+                uid = prompt("Simular NFC ID:", "card-pro-1");
+            }
+        } catch(e) {
+            diagLog(`ℹ️ NFC no disponible o cancelado: ${e.message}`);
+            uid = prompt("Fallo NFC, ingresa ID manual:", "card-pro-1");
+        }
+
+        if (!uid) {
+            showMsg(view, '', 'Operación cancelada.');
+            return;
+        }
+
+        payload.nfc_uid = uid;
+
+        // Validaciones finales
+        if (action === 'topup' && (!payload.monto || payload.monto <= 0)) {
+            showMsg(view, 'error', 'Ingresa un monto válido.');
+            return;
+        }
+        if (action === 'sale' && !payload.product_id) {
+            showMsg(view, 'error', 'Selecciona un producto.');
+            return;
+        }
+
+        playBeep();
+
+        const endpoint = action === 'register' ? 'register-nfc-pro-v2' :
+                         action === 'topup'    ? 'add-balance-pro-v2' :
+                                                 'sale-pro-v2';
+        const url = getN8nUrl(endpoint);
+
+        diagLog(`🚀 Conectando con servidor: ${endpoint}...`);
+        showMsg(view, 'success', '📡 Enviando datos...');
+
+        try {
+            const queryParams = new URLSearchParams(payload).toString();
+            const finalUrl = `${url}&${queryParams}`;
+            diagLog(`🔗 Enviando solicitud...`);
+
+            const res = await fetch(finalUrl, {
+                method: 'GET',
+                mode: 'cors',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            diagLog(`📡 Respuesta: HTTP ${res.status}`);
+
+            if (res.status === 404) {
+                showMsg(view, 'error', 'Error 404: Activa el flujo en n8n');
+                return;
+            }
+
+            const text = await res.text();
+            if (!text) {
+                diagLog("❌ Error: Respuesta vacía del servidor.");
+                showMsg(view, 'error', 'Error: El usuario no existe o el flujo no devolvió datos.');
+                return;
+            }
+
+            let parsed;
+            try {
+                parsed = JSON.parse(text);
+            } catch (e) {
+                diagLog("❌ Error parseando JSON: " + text);
+                showMsg(view, 'error', 'Respuesta inválida del servidor.');
+                return;
+            }
+
+            // n8n respondToWebhook devuelve siempre un array — desempaquetar
+            const result = Array.isArray(parsed) ? parsed[0] : parsed;
+            diagLog(`📦 Respuesta del servidor: status="${result.status}" message="${result.message || ''}"`);
+
+            const viewName = action === 'topup' ? 'top' : (action === 'register' ? 'reg' : 'sale');
+
+            if (result.status === 'success') {
+                showMsg(viewName, 'success', `✅ Éxito! ${result.saldo_restante ? 'Saldo: $' + result.saldo_restante : ''}`);
+                diagLog("✅ Operación completada con éxito.");
+                loadHist();
+            } else {
+                const errorMsg = result.message || 'Error en el servidor';
+                showMsg(viewName, 'error', `❌ ${errorMsg}`);
+                diagLog(`❌ Error: ${errorMsg}`);
+            }
+        } catch(e) {
+            diagLog(`❌ Error de red crítico: ${e.message}`);
+            showMsg(view, 'error', 'Fallo de conexión total.');
+        }
+    }
+
+    function showMsg(view, type, msg) {
+        const el = document.getElementById('status-' + view);
+        if (!el) return;
+        el.innerText = msg;
+        el.className = 'status ' + type;
+    }
+
+    // Inicializar al cargar
+    window.onload = loadProducts;
+</script>
+</body>
+</html>
