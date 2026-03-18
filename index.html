@@ -222,7 +222,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>💳 NFC Pro System</h1>
+        <h1>💳 NFC Pro System v1.1</h1>
         <p>Tinta &amp; Pixel · Modo Producción</p>
     </div>
     <div class="nav">
@@ -232,6 +232,12 @@
         <div class="nav-item" onclick="switchTab('hist'); loadHist()">Historial</div>
     </div>
     <div class="content">
+        <!-- BANNER NFC IOS -->
+        <div id="active-tag-banner" style="display: none; background: var(--accent); color: white; padding: 12px; border-radius: 10px; margin-bottom: 20px; justify-content: space-between; align-items: center; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
+            <span>📲 Pulsera lista: <span id="active-tag-id"></span></span>
+            <button onclick="clearTag()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">✕</button>
+        </div>
+
         <!-- VISTA COBRO -->
         <div id="view-sale" class="view active">
             <div class="form-group">
@@ -283,6 +289,25 @@
         apiKey: 'mi-secreto-nfc'
     };
     // ────────────────────────────────────────────────────────────────────────────
+
+    let activeUid = new URLSearchParams(window.location.search).get('uid') || new URLSearchParams(window.location.search).get('nfc_uid');
+
+    function checkActiveTag() {
+        const banner = document.getElementById('active-tag-banner');
+        if (activeUid) {
+            document.getElementById('active-tag-id').innerText = activeUid;
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    function clearTag() {
+        activeUid = null;
+        window.history.replaceState({}, document.title, window.location.pathname);
+        checkActiveTag();
+        diagLog("🧹 Pulsera limpiada manualmente.");
+    }
 
     function getN8nUrl(endpoint) {
         return `${CONFIG.host}/${CONFIG.mode}/${endpoint}?api_key=${CONFIG.apiKey}`;
@@ -449,41 +474,45 @@
             if (!payload.product_id) return alert("Selecciona un producto");
         }
 
-        let uid = "";
+        let uid = activeUid;
         diagLog(`🔍 Iniciando acción: ${action}`);
-        showMsg(view, 'success', '📱 Esperando NFC... Acerque la pulsera');
 
-        // Lectura NFC con protección y fallback manual
-        try {
-            if ("NDEFReader" in window) {
-                diagLog("📡 Lector NFC detectado, iniciando escaneo...");
-                const ndef = new NDEFReader();
-                await ndef.scan();
+        if (uid) {
+            diagLog(`⚡ Usando pulsera detectada por URL: ${uid}`);
+        } else {
+            showMsg(view, 'success', '📱 Esperando NFC... Acerque la pulsera');
+            // Lectura NFC con protección y fallback manual
+            try {
+                if ("NDEFReader" in window) {
+                    diagLog("📡 Lector NFC detectado, iniciando escaneo...");
+                    const ndef = new NDEFReader();
+                    await ndef.scan();
 
-                uid = await new Promise((resolve, reject) => {
-                    const timer = setTimeout(() => {
-                        diagLog("⚠️ Tiempo de espera NFC agotado.");
-                        reject(new Error("Timeout"));
-                    }, 15000);
+                    uid = await new Promise((resolve, reject) => {
+                        const timer = setTimeout(() => {
+                            diagLog("⚠️ Tiempo de espera NFC agotado.");
+                            reject(new Error("Timeout"));
+                        }, 15000);
 
-                    ndef.onreading = event => {
-                        clearTimeout(timer);
-                        diagLog("✅ Tag detectado!");
-                        resolve(event.serialNumber);
-                    };
+                        ndef.onreading = event => {
+                            clearTimeout(timer);
+                            diagLog("✅ Tag detectado!");
+                            resolve(event.serialNumber);
+                        };
 
-                    if (confirm("¿Deseas ingresar el ID manualmente (Simulación)?")) {
-                        clearTimeout(timer);
-                        resolve(prompt("ID Manual:", "card-pro-1"));
-                    }
-                });
-            } else {
-                diagLog("⚠️ Navegador no soporta NDEFReader, usando simulación.");
-                uid = prompt("Simular NFC ID:", "card-pro-1");
+                        if (confirm("¿Deseas ingresar el ID manualmente (Simulación)?")) {
+                            clearTimeout(timer);
+                            resolve(prompt("ID Manual:", "card-pro-1"));
+                        }
+                    });
+                } else {
+                    diagLog("⚠️ Navegador no soporta NDEFReader, usando simulación.");
+                    uid = prompt("Simular NFC ID:", "card-pro-1");
+                }
+            } catch(e) {
+                diagLog(`ℹ️ NFC no disponible o cancelado: ${e.message}`);
+                uid = prompt("Fallo NFC, ingresa ID manual:", "card-pro-1");
             }
-        } catch(e) {
-            diagLog(`ℹ️ NFC no disponible o cancelado: ${e.message}`);
-            uid = prompt("Fallo NFC, ingresa ID manual:", "card-pro-1");
         }
 
         if (!uid) {
@@ -556,6 +585,7 @@
             if (result.status === 'success') {
                 showMsg(viewName, 'success', `✅ Éxito! ${result.saldo_restante ? 'Saldo: $' + result.saldo_restante : ''}`);
                 diagLog("✅ Operación completada con éxito.");
+                if (activeUid) clearTag();
                 loadHist();
             } else {
                 const errorMsg = result.message || 'Error en el servidor';
@@ -576,7 +606,13 @@
     }
 
     // Inicializar al cargar
-    window.onload = loadProducts;
+    window.onload = () => {
+        loadProducts();
+        checkActiveTag();
+        if (activeUid) {
+            diagLog(`📲 Tag detectado en URL (Modo iOS): ${activeUid}`);
+        }
+    };
 </script>
 </body>
 </html>
