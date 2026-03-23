@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechTap Mx v1.1</title>
+    <title>NFC Pro - Tinta & Pixel</title>
     <style>
         :root {
             --primary: #4f46e5;
@@ -31,20 +31,13 @@
             overflow: hidden;
         }
         .header {
-            background: #ffffff;
-            color: var(--text);
-            padding: 30px 20px 20px;
+            background: var(--primary);
+            color: white;
+            padding: 24px;
             text-align: center;
-            border-bottom: 3px solid #f3f4f6;
         }
-        .header img {
-            max-height: 85px;
-            margin: 0 auto 12px auto;
-            display: block;
-            object-fit: contain;
-        }
-        .header h1 { margin: 0; font-size: 1.7rem; font-weight: 800; color: #111827; letter-spacing: -0.5px; }
-        .header p { margin: 8px 0 0; font-size: 0.85rem; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .header h1 { margin: 0; font-size: 1.5rem; }
+        .header p { margin: 6px 0 0; font-size: 0.8rem; opacity: 0.8; }
 
         .nav {
             display: flex;
@@ -229,56 +222,25 @@
 <body>
 <div class="container">
     <div class="header">
-        <img src="logo.jpg" alt="Logo TechTap MX" id="main-logo" onerror="this.style.display='none'">
-        <h1>TechTap Mx <span style="font-size: 0.9rem; color: #4f46e5; background: #e0e7ff; padding: 3px 10px; border-radius: 12px; vertical-align: middle; margin-left: 6px; font-weight: 800;">v1.1</span></h1>
-        <p>Modo Producción</p>
+        <h1>💳 NFC Pro System</h1>
+        <p>Tinta &amp; Pixel · Modo Producción</p>
     </div>
     <div class="nav">
         <div class="nav-item active" onclick="switchTab('sale')">Cobro</div>
         <div class="nav-item" onclick="switchTab('top')">Saldo</div>
-        <div class="nav-item" onclick="switchTab('reg')">Registrar</div>
-        <div class="nav-item" onclick="switchTab('adj')">Ajuste</div>
-        <div class="nav-item" onclick="switchTab('menu'); loadProdAdmin()">Menú</div>
+        <div class="nav-item" onclick="switchTab('reg')">Admin</div>
         <div class="nav-item" onclick="switchTab('hist'); loadHist()">Historial</div>
     </div>
     <div class="content">
-        <!-- BANNER NFC IOS -->
-        <div id="active-tag-banner" style="display: none; background: var(--accent); color: white; padding: 12px; border-radius: 10px; margin-bottom: 20px; justify-content: space-between; align-items: center; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
-            <span>📲 Pulsera lista: <span id="active-tag-id"></span></span>
-            <button onclick="clearTag()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">✕</button>
-        </div>
-
         <!-- VISTA COBRO -->
         <div id="view-sale" class="view active">
-            <!-- VENTA GENERAL -->
-            <div class="form-group" style="margin-bottom: 20px; background:#fff; padding:15px; border-radius:12px; border:1px solid #e5e7eb;">
-                <label style="color:var(--primary); font-weight:700;">🛒 Venta General (Sin registrar)</label>
-                <div style="display: flex; gap: 10px; margin-top:8px;">
-                    <div style="position:relative; flex:1;">
-                        <span style="position:absolute; left:12px; top:12px; font-weight:bold; color:#6b7280;">$</span>
-                        <input type="number" id="inp-general" placeholder="0.00" min="0.01" step="0.01" style="padding-left:25px;">
-                    </div>
-                    <button onclick="addGeneralSale()" style="background:var(--accent); color:white; border:none; padding:0 20px; border-radius:10px; font-weight:600; cursor:pointer; min-width:90px;">Agregar</button>
-                </div>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label>Productos Disponibles</label>
-                <div id="product-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 200px; overflow-y: auto; padding-right: 5px;">
-                    <div style="text-align:center; color:#9ca3af; font-size:0.9rem; grid-column: span 2;">Cargando...</div>
-                </div>
-            </div>
             <div class="form-group">
-                <label>Carrito</label>
-                <div id="cart-items" style="background:#f9fafb; border:1px solid #d1d5db; border-radius:10px; padding:10px; min-height:60px; max-height:150px; overflow-y:auto;">
-                    <div style="text-align:center; color:#9ca3af; font-size:0.9rem; margin-top:10px;">Carrito vacío</div>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-top:12px; font-weight:800; font-size:1.2rem; color:var(--primary);">
-                    <span>Total a cobrar:</span>
-                    <span id="cart-total">$0.00</span>
-                </div>
+                <label>Seleccionar Producto</label>
+                <select id="sel-products">
+                    <option value="">Cargando productos...</option>
+                </select>
             </div>
-            <button class="btn" onclick="executeAction('sale')" style="margin-top:20px;">📡 Cobrar con NFC</button>
+            <button class="btn" onclick="executeAction('sale')">📡 Cobrar con NFC</button>
             <div id="status-sale" class="status"></div>
         </div>
 
@@ -302,43 +264,6 @@
             <div id="status-reg" class="status"></div>
         </div>
 
-        <!-- VISTA AJUSTE -->
-        <div id="view-adj" class="view">
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label>Contraseña de Autorización</label>
-                <input type="password" id="inp-adj-pass" placeholder="***">
-            </div>
-            <div class="form-group">
-                <label>Monto a Devolver / Ajustar ($)</label>
-                <input type="number" id="inp-adj-amount" placeholder="Ej: 50.00 o -25.00" step="0.01">
-            </div>
-            <button class="btn" onclick="executeAction('adjust')" style="background:#dc2626">🔄 Ajustar Saldo con NFC</button>
-            <div id="status-adj" class="status"></div>
-        </div>
-
-        <!-- VISTA MANTENIMIENTO PRODUCTOS -->
-        <div id="view-menu" class="view">
-            <div class="form-group" style="background:#fff; padding:15px; border-radius:12px; border:1px solid #e5e7eb; margin-bottom: 20px;">
-                <label style="color:var(--primary); font-weight:700;">➕ Nuevo Producto</label>
-                <div style="display: flex; gap: 10px; margin-top:8px; flex-wrap:wrap;">
-                    <input type="text" id="inp-new-pname" placeholder="Ej: Hamburguesa" style="flex:2; min-width:120px;">
-                    <div style="position:relative; flex:1; min-width:80px;">
-                        <span style="position:absolute; left:12px; top:12px; font-weight:bold; color:#6b7280;">$</span>
-                        <input type="number" id="inp-new-pprice" placeholder="0.00" min="0.01" step="0.01" style="padding-left:25px;">
-                    </div>
-                </div>
-                <button onclick="addProductReq()" style="background:var(--accent); color:white; border:none; padding:12px; border-radius:10px; font-weight:600; cursor:pointer; width:100%; margin-top:10px;">Subir Producto</button>
-            </div>
-
-            <div class="form-group">
-                <label>Productos Registrados</label>
-                <div id="admin-product-list" style="display:flex; flex-direction:column; gap:8px;">
-                     <!-- Llenado dinámico -->
-                </div>
-            </div>
-            <div id="status-menu" class="status"></div>
-        </div>
-
         <!-- VISTA HISTORIAL -->
         <div id="view-hist" class="view">
             <div id="hist-list">Cargando transacciones...</div>
@@ -358,25 +283,6 @@
         apiKey: 'mi-secreto-nfc'
     };
     // ────────────────────────────────────────────────────────────────────────────
-
-    let activeUid = new URLSearchParams(window.location.search).get('uid') || new URLSearchParams(window.location.search).get('nfc_uid');
-
-    function checkActiveTag() {
-        const banner = document.getElementById('active-tag-banner');
-        if (activeUid) {
-            document.getElementById('active-tag-id').innerText = activeUid;
-            banner.style.display = 'flex';
-        } else {
-            banner.style.display = 'none';
-        }
-    }
-
-    function clearTag() {
-        activeUid = null;
-        window.history.replaceState({}, document.title, window.location.pathname);
-        checkActiveTag();
-        diagLog("🧹 Pulsera limpiada manualmente.");
-    }
 
     function getN8nUrl(endpoint) {
         return `${CONFIG.host}/${CONFIG.mode}/${endpoint}?api_key=${CONFIG.apiKey}`;
@@ -413,78 +319,6 @@
         console.log(msg);
     }
 
-    // ── LÓGICA DE CARRITO ──
-    let cart = {}; 
-    let productsList = [];
-
-    function addToCart(dbId) {
-        const p = productsList.find(x => x.id === dbId);
-        if (!p) return;
-        if (!cart[dbId]) {
-            cart[dbId] = { key: dbId, id: p.id, name: p.nombre, price: Number(p.precio), quantity: 1 };
-        } else {
-            cart[dbId].quantity++;
-        }
-        renderCart();
-    }
-
-    function addGeneralSale() {
-        const val = parseFloat(document.getElementById('inp-general').value);
-        if (isNaN(val) || val <= 0) return alert("Por favor, ingresa un monto positivo mayor a cero.");
-        
-        const key = 'gen_' + Date.now();
-        cart[key] = { key: key, id: null, name: "Venta Gral. ($" + val.toFixed(2) + ")", price: val, quantity: 1 };
-        
-        document.getElementById('inp-general').value = '';
-        renderCart();
-    }
-
-    function increaseCart(key) {
-        if (cart[key]) cart[key].quantity++;
-        renderCart();
-    }
-
-    function decreaseCart(key) {
-        if (cart[key]) {
-            cart[key].quantity--;
-            if (cart[key].quantity <= 0) delete cart[key];
-        }
-        renderCart();
-    }
-
-    function renderCart() {
-        const container = document.getElementById('cart-items');
-        const totalEl = document.getElementById('cart-total');
-        let total = 0;
-        const items = Object.values(cart);
-        
-        if (items.length === 0) {
-            container.innerHTML = '<div style="text-align:center; color:#9ca3af; font-size:0.9rem; margin-top:10px;">Carrito vacío</div>';
-            totalEl.innerText = '$0.00';
-            return;
-        }
-        
-        container.innerHTML = items.map(i => {
-            total += i.price * i.quantity;
-            return `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:0.9rem; border-bottom:1px solid #e5e7eb; padding-bottom:6px;">
-                <div style="flex:1;">
-                    <div style="font-weight:600; color:#111827;">${i.name}</div>
-                    <div style="font-size:0.8rem; color:#6b7280;">$${i.price.toFixed(2)} c/u</div>
-                </div>
-                <div style="margin-right:12px; font-weight:700; color:var(--primary);">$${(i.price * i.quantity).toFixed(2)}</div>
-                <div style="display:flex; gap:6px; align-items:center;">
-                    <button onclick="decreaseCart('${i.key}')" style="width:28px;height:28px;border:none;background:#fee2e2;color:#991b1b;border-radius:6px;cursor:pointer;font-weight:bold;font-size:1.1rem;">-</button>
-                    <span style="min-width:20px; text-align:center; font-weight:700;">${i.quantity}</span>
-                    <button onclick="increaseCart('${i.key}')" style="width:28px;height:28px;border:none;background:#d1fae5;color:#065f46;border-radius:6px;cursor:pointer;font-weight:bold;font-size:1.1rem;">+</button>
-                </div>
-            </div>
-            `;
-        }).join('');
-        totalEl.innerText = '$' + total.toFixed(2);
-    }
-
-
     async function loadProducts() {
         const url = getN8nUrl('products-pro-v2');
         diagLog(`🔍 Cargando productos...`);
@@ -493,28 +327,19 @@
             diagLog(`📡 Productos: HTTP ${res.status}`);
             if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
-            const grid = document.getElementById('product-grid');
+            const select = document.getElementById('sel-products');
             if (!data || data.length === 0) {
                 diagLog("⚠️ La lista de productos está vacía en la base de datos.");
-                grid.innerHTML = '<div style="grid-column: span 2; text-align:center; font-size:0.9rem;">Sin productos disponibles</div>';
+                select.innerHTML = '<option value="">Sin productos disponibles</option>';
             } else {
                 diagLog(`✅ ${data.length} productos cargados.`);
-                productsList = data;
-                grid.innerHTML = data.map(p => `
-                    <div onclick="addToCart('${p.id}')" style="background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px; text-align:center; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.05); transition:all 0.15s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='#e5e7eb'">
-                        <div style="font-weight:600; font-size:0.85rem; margin-bottom:4px; line-height:1.2; word-wrap:break-word;">${p.nombre}</div>
-                        <div style="color:var(--primary); font-weight:800; font-size:0.95rem;">$${Number(p.precio).toFixed(2)}</div>
-                    </div>
-                `).join('');
+                select.innerHTML = data.map(p => `<option value="${p.id}">${p.nombre} ($${p.precio})</option>`).join('');
             }
         } catch(e) {
             diagLog(`❌ Error cargando productos: ${e.message}`);
-            document.getElementById('product-grid').innerHTML = '<div style="grid-column:span 2; text-align:center; color:red; font-size:0.9rem;">Error cargando productos</div>';
+            document.getElementById('sel-products').innerHTML = '<option value="">Error cargando productos</option>';
         }
     }
-
-    let allHistoryData = [];
-    let currentHistoryLimit = 5;
 
     async function loadHist() {
         const url = getN8nUrl('transactions-pro-v2');
@@ -533,30 +358,225 @@
                 list.innerHTML = '<div class="empty-state">📭 No hay transacciones aún.</div>';
                 return;
             }
-            allHistoryData = data;
-            currentHistoryLimit = 5;
-            renderHist();
-            diagLog(`✅ Historial listo: ${data.length} registros en total.`);
+
+            // ── Resumen del día ───────────────────────────────────────────
+            const today = new Date().toDateString();
+            const todayTx = data.filter(t => new Date(t.fecha || t.created_at).toDateString() === today);
+            const totalHoy = todayTx.reduce((s, t) => s + Number(t.precio || 0), 0);
+
+            // ── Top productos (de toda la muestra) ────────────────────────
+            const productMap = {};
+            data.forEach(t => {
+                const name = t.product_name || t.nombre_producto || 'Sin nombre';
+                if (!productMap[name]) productMap[name] = { count: 0, total: 0 };
+                productMap[name].count++;
+                productMap[name].total += Number(t.precio || 0);
+            });
+            const topProducts = Object.entries(productMap)
+                .sort((a, b) => b[1].count - a[1].count)
+                .slice(0, 3);
+            const rankClass = i => ['gold', 'silver', 'bronze'][i] || '';
+            const rankIcon  = i => ['🥇', '🥈', '🥉'][i] || (i + 1);
+
+            // ── Render ─────────────────────────────────────────────────────
+            list.innerHTML = `
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="s-value">$${totalHoy.toFixed(2)}</div>
+                        <div class="s-label">Ventas de hoy</div>
+                    </div>
+                    <div class="summary-card green">
+                        <div class="s-value">${todayTx.length}</div>
+                        <div class="s-label">Transacciones hoy</div>
+                    </div>
+                </div>
+
+                ${topProducts.length > 0 ? `
+                <div class="section-title">🏆 Productos más vendidos</div>
+                <div class="top-products-list">
+                    ${topProducts.map(([name, info], i) => `
+                        <div class="top-product-item">
+                            <div class="rank-badge ${rankClass(i)}">${rankIcon(i)}</div>
+                            <div class="p-info">
+                                <div class="p-name">${name}</div>
+                                <div class="p-sales">${info.count} venta${info.count !== 1 ? 's' : ''}</div>
+                            </div>
+                            <div class="p-total">$${info.total.toFixed(2)}</div>
+                        </div>
+                    `).join('')}
+                </div>` : ''}
+
+                <div class="section-title">🕒 Últimas transacciones</div>
+                <div class="tx-list">
+                    ${data.map(t => {
+                        const fecha   = new Date(t.fecha || t.created_at || Date.now());
+                        const timeStr = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const dateStr = fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+                        const uid     = t.nfc_uid ? t.nfc_uid.slice(0, 10) + '…' : 'N/A';
+                        return `
+                        <div class="tx-item">
+                            <div class="tx-left">
+                                <span class="tx-name">${t.product_name || t.nombre_producto || 'Compra'}</span>
+                                <span class="tx-meta">🪪 ${uid} &nbsp;·&nbsp; ${dateStr} ${timeStr}</span>
+                            </div>
+                            <span class="tx-price">$${Number(t.precio || 0).toFixed(2)}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+
+                <button class="hist-refresh" onclick="loadHist()">🔄 Actualizar historial</button>
+            `;
+            diagLog(`✅ Historial cargado: ${data.length} registros. Hoy: ${todayTx.length} txs.`);
         } catch(e) {
             diagLog(`❌ Error en historial: ${e.message}`);
             list.innerHTML = `<div class="empty-state">❌ Sin conexión. Revisa n8n.</div>`;
         }
     }
 
-    function renderHist() {
-        const list = document.getElementById('hist-list');
-        const data = allHistoryData;
-        const today = new Date().toDateString();
-        
-        // Excluimos recargas y ajustes del total de "Ventas" y del "Top Productos"
-        const isIngreso = t => t.status === 'ajuste' || t.status === 'recarga' || (t.precio && t.precio < 0 && t.product_id == null); 
-        
-        const todayTx = data.filter(t => new Date(t.fecha || t.created_at).toDateString() === today);
-        const totalHoy = todayTx.filter(t => !isIngreso(t)).reduce((s, t) => s + Number(t.precio || 0), 0);
+    async function executeAction(action) {
+        let payload = {};
+        const view = action === 'topup' ? 'top' : (action === 'register' ? 'reg' : 'sale');
 
-        const productMap = {};
-        data.filter(t => !isIngreso(t)).forEach(t => {
-            const name = t.product_name || t.nombre_producto || 'Productos Varios';
-            if (!productMap[name]) productMap[name] = { count: 0, total: 0 };
-            productMap[name].count++;
-   
+        // Validar inputs según la acción
+        if (action === 'register') {
+            payload.nombre = document.getElementById('inp-name').value;
+            if (!payload.nombre) return alert("Nombre requerido");
+        } else if (action === 'topup') {
+            payload.monto = document.getElementById('inp-amount').value;
+            if (!payload.monto) return alert("Monto requerido");
+        } else if (action === 'sale') {
+            payload.product_id = document.getElementById('sel-products').value;
+            if (!payload.product_id) return alert("Selecciona un producto");
+        }
+
+        let uid = "";
+        diagLog(`🔍 Iniciando acción: ${action}`);
+        showMsg(view, 'success', '📱 Esperando NFC... Acerque la pulsera');
+
+        // Lectura NFC con protección y fallback manual
+        try {
+            if ("NDEFReader" in window) {
+                diagLog("📡 Lector NFC detectado, iniciando escaneo...");
+                const ndef = new NDEFReader();
+                await ndef.scan();
+
+                uid = await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => {
+                        diagLog("⚠️ Tiempo de espera NFC agotado.");
+                        reject(new Error("Timeout"));
+                    }, 15000);
+
+                    ndef.onreading = event => {
+                        clearTimeout(timer);
+                        diagLog("✅ Tag detectado!");
+                        resolve(event.serialNumber);
+                    };
+
+                    if (confirm("¿Deseas ingresar el ID manualmente (Simulación)?")) {
+                        clearTimeout(timer);
+                        resolve(prompt("ID Manual:", "card-pro-1"));
+                    }
+                });
+            } else {
+                diagLog("⚠️ Navegador no soporta NDEFReader, usando simulación.");
+                uid = prompt("Simular NFC ID:", "card-pro-1");
+            }
+        } catch(e) {
+            diagLog(`ℹ️ NFC no disponible o cancelado: ${e.message}`);
+            uid = prompt("Fallo NFC, ingresa ID manual:", "card-pro-1");
+        }
+
+        if (!uid) {
+            showMsg(view, '', 'Operación cancelada.');
+            return;
+        }
+
+        payload.nfc_uid = uid;
+
+        // Validaciones finales
+        if (action === 'topup' && (!payload.monto || payload.monto <= 0)) {
+            showMsg(view, 'error', 'Ingresa un monto válido.');
+            return;
+        }
+        if (action === 'sale' && !payload.product_id) {
+            showMsg(view, 'error', 'Selecciona un producto.');
+            return;
+        }
+
+        playBeep();
+
+        const endpoint = action === 'register' ? 'register-nfc-pro-v2' :
+                         action === 'topup'    ? 'add-balance-pro-v2' :
+                                                 'sale-pro-v2';
+        const url = getN8nUrl(endpoint);
+
+        diagLog(`🚀 Conectando con servidor: ${endpoint}...`);
+        showMsg(view, 'success', '📡 Enviando datos...');
+
+        try {
+            const queryParams = new URLSearchParams(payload).toString();
+            const finalUrl = `${url}&${queryParams}`;
+            diagLog(`🔗 Enviando solicitud...`);
+
+            const res = await fetch(finalUrl, {
+                method: 'GET',
+                mode: 'cors',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            diagLog(`📡 Respuesta: HTTP ${res.status}`);
+
+            if (res.status === 404) {
+                showMsg(view, 'error', 'Error 404: Activa el flujo en n8n');
+                return;
+            }
+
+            const text = await res.text();
+            if (!text) {
+                diagLog("❌ Error: Respuesta vacía del servidor.");
+                showMsg(view, 'error', 'Error: El usuario no existe o el flujo no devolvió datos.');
+                return;
+            }
+
+            let parsed;
+            try {
+                parsed = JSON.parse(text);
+            } catch (e) {
+                diagLog("❌ Error parseando JSON: " + text);
+                showMsg(view, 'error', 'Respuesta inválida del servidor.');
+                return;
+            }
+
+            // n8n respondToWebhook devuelve siempre un array — desempaquetar
+            const result = Array.isArray(parsed) ? parsed[0] : parsed;
+            diagLog(`📦 Respuesta del servidor: status="${result.status}" message="${result.message || ''}"`);
+
+            const viewName = action === 'topup' ? 'top' : (action === 'register' ? 'reg' : 'sale');
+
+            if (result.status === 'success') {
+                showMsg(viewName, 'success', `✅ Éxito! ${result.saldo_restante ? 'Saldo: $' + result.saldo_restante : ''}`);
+                diagLog("✅ Operación completada con éxito.");
+                loadHist();
+            } else {
+                const errorMsg = result.message || 'Error en el servidor';
+                showMsg(viewName, 'error', `❌ ${errorMsg}`);
+                diagLog(`❌ Error: ${errorMsg}`);
+            }
+        } catch(e) {
+            diagLog(`❌ Error de red crítico: ${e.message}`);
+            showMsg(view, 'error', 'Fallo de conexión total.');
+        }
+    }
+
+    function showMsg(view, type, msg) {
+        const el = document.getElementById('status-' + view);
+        if (!el) return;
+        el.innerText = msg;
+        el.className = 'status ' + type;
+    }
+
+    // Inicializar al cargar
+    window.onload = loadProducts;
+</script>
+</body>
+</html>
