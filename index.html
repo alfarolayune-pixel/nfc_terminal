@@ -781,10 +781,6 @@
                             resolve(event.serialNumber);
                         };
 
-                        if (confirm("¿Deseas ingresar el ID manualmente (Simulación)?")) {
-                            clearTimeout(timer);
-                            resolve(prompt("ID Manual:", "card-pro-1"));
-                        }
                     });
                 } else {
                     diagLog("⚠️ Navegador no soporta NDEFReader, usando simulación.");
