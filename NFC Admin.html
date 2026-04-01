@@ -601,15 +601,21 @@
     }
 
 
-    function logoutVendor() {
-        if(!confirm("¿Cerrar turno de " + (currentVendorName || 'este stand') + "?")) return;
+    function logoutVendor(auto = false) {
+        if(!auto && !confirm("¿Cerrar turno de " + (currentVendorName ? currentVendorName.replace('GLOBAL|', '') : 'este admin') + "?")) return;
         currentVendorId = '';
         currentVendorName = '';
         localStorage.removeItem('vendor_id');
         localStorage.removeItem('vendor_name');
         checkVendorLogin();
-        diagLog("🔒 Turno cerrado.");
+        diagLog("🔒 Turno cerrado" + (auto ? " por inactividad/cambio de pantalla." : "."));
     }
+
+    document.addEventListener("visibilitychange", function() {
+        if (document.hidden && currentVendorId) {
+            logoutVendor(true);
+        }
+    });
 
     async function authenticateVendor() {
         let uid = null;
@@ -665,6 +671,9 @@
                 setTimeout(() => {
                     checkVendorLogin();
                     loadProducts();
+                    switchTab('reg');
+                    document.getElementById('inp-reg-name').value = '';
+                    showMsg('reg', '', '');
                 }, 900);
             } else {
                 statusEl.className = 'status error';
@@ -1224,6 +1233,7 @@
         checkVendorLogin();
         loadProducts();
         checkActiveTag();
+        switchTab('reg');
         if (activeUid) {
             diagLog(`📲 Tag detectado en URL (Modo iOS): ${activeUid}`);
         }
