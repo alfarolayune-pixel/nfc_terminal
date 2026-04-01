@@ -468,13 +468,13 @@
             const result = JSON.parse(text);
             const data = Array.isArray(result) ? result[0] : result;
 
-            if (data.status === 'success') {
+            if (data && data.status === 'success') {
                 showMsg(view, 'success', '✅ Gafete o Tarjeta Mestra de Stand registrada con éxito.');
                 document.getElementById('inp-stand-name').value = '';
                 diagLog("✅ Stand creado: " + name);
             } else {
-                let errorMsg = data.message || 'Misterio';
-                if (errorMsg.includes('Unauthorized') || errorMsg.includes('Invalid API Key')) {
+                let errorMsg = (data && data.message) ? data.message : 'Conflicto de registro';
+                if (errorMsg.includes('Unauthorized') || errorMsg.includes('Invalid API Key') || errorMsg === 'Conflicto de registro') {
                     errorMsg = 'Esta pulsera ya se encuentra asignada a un stand o usuario. Utiliza una pulsera nueva.';
                 }
                 showMsg(view, 'error', '❌ Error al registrar: ' + errorMsg);
@@ -1182,9 +1182,9 @@
 
             // n8n respondToWebhook devuelve siempre un array — desempaquetar
             const result = Array.isArray(parsed) ? parsed[0] : parsed;
-            diagLog(`📦 Respuesta del servidor: status="${result.status}" message="${result.message || ''}"`);
+            diagLog(`📦 Respuesta del servidor: status="${result ? result.status : 'undefined'}"`);
 
-            if (result.status === 'success') {
+            if (result && result.status === 'success') {
                 showMsg(view, 'success', `✅ Éxito! ${result.saldo_restante ? 'Saldo: $' + result.saldo_restante : ''}`);
                 diagLog("✅ Operación completada con éxito.");
                 if (action === 'sale') {
@@ -1197,8 +1197,8 @@
                 if (activeUid) clearTag();
                 loadHist();
             } else {
-                let errorMsg = result.message || 'Servicio ocupado. Reintente más tarde.';
-                if (errorMsg.includes('Unauthorized') || errorMsg.includes('Invalid API Key')) {
+                let errorMsg = (result && result.message) ? result.message : 'Conflicto de registro';
+                if (errorMsg.includes('Unauthorized') || errorMsg.includes('Invalid API Key') || errorMsg === 'Conflicto de registro') {
                     errorMsg = action === 'register' 
                         ? 'Esta pulsera ya se encuentra registrada en el sistema. Utiliza una pulsera nueva.'
                         : 'Permisos insuficientes o pulsera inválida.';
