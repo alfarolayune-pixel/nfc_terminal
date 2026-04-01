@@ -499,8 +499,15 @@
     function switchTab(t) {
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        document.getElementById('view-' + t).classList.add('active');
+        const tabs = Array.from(document.querySelectorAll('.nav-item'));
+        const activeTab = tabs.find(el => el.getAttribute('onclick') && el.getAttribute('onclick').includes("switchTab('" + t + "')"));
+        if (activeTab) {
+            activeTab.classList.add('active');
+        } else if (window.event && window.event.currentTarget) {
+            window.event.currentTarget.classList.add('active');
+        }
+        const viewEl = document.getElementById('view-' + t);
+        if (viewEl) viewEl.classList.add('active');
     }
 
     function diagLog(msg) {
