@@ -452,12 +452,20 @@
         }
 
         if(!uid) return;
+        playBeep();
         showMsg(view, 'success', '📡 Registrando en el sistema...');
 
         try {
             const url = getN8nUrl('register-vendor-pro-v2') + "&nfc_uid=" + encodeURIComponent(uid) + "&vendor_name=" + encodeURIComponent(name);
             const res = await fetch(url);
-            const result = await res.json();
+            const text = await res.text();
+            
+            if (!text) {
+                showMsg(view, 'error', '❌ Esta pulsera ya se encuentra asignada a un stand o usuario. Utiliza una pulsera nueva.');
+                return;
+            }
+            
+            const result = JSON.parse(text);
             const data = Array.isArray(result) ? result[0] : result;
 
             if (data.status === 'success') {
@@ -465,7 +473,11 @@
                 document.getElementById('inp-stand-name').value = '';
                 diagLog("✅ Stand creado: " + name);
             } else {
-                showMsg(view, 'error', '❌ Error al registrar: ' + (data.message || 'Misterio'));
+                let errorMsg = data.message || 'Misterio';
+                if (errorMsg.includes('Unauthorized') || errorMsg.includes('Invalid API Key')) {
+                    errorMsg = 'Esta pulsera ya se encuentra asignada a un stand o usuario. Utiliza una pulsera nueva.';
+                }
+                showMsg(view, 'error', '❌ Error al registrar: ' + errorMsg);
             }
         } catch(e) {
             showMsg(view, 'error', '❌ Error de red.');
@@ -524,11 +536,18 @@
             diagLog(`📡 Paso 1 HTTP: ${res1.status}`);
             if (res1.status === 404) { showMsg(view, 'error', '❌ Sistema desconectado. Notifica al supervisor.'); return; }
             const text1 = await res1.text();
-            if (!text1) { showMsg(view, 'error', '❌ Esta pulsera ya existe o es inválida. Revisa con el administrador.'); return; }
+            if (!text1) { showMsg(view, 'error', '❌ Esta pulsera ya se encuentra registrada en el sistema. Utiliza una pulsera nueva.'); return; }
             let parsed1; try { parsed1 = JSON.parse(text1); } catch(e) { showMsg(view, 'error', '❌ Conflicto interno. Intenta nuevamente.'); return; }
             const r1 = Array.isArray(parsed1) ? parsed1[0] : parsed1;
             diagLog(`📦 Paso 1: status="${r1.status}"`);
-            if (r1.status !== 'success') { showMsg(view, 'error', `❌ ${r1.message || 'No se pudo crear la billetera.'}`); return; }
+            if (r1.status !== 'success') { 
+                let errorMsg = r1.message || 'No se pudo crear la billetera.';
+                if (errorMsg.includes('Unauthorized') || errorMsg.includes('Invalid API Key')) {
+                    errorMsg = 'Esta pulsera ya se encuentra registrada en el sistema. Utiliza una pulsera nueva.';
+                }
+                showMsg(view, 'error', `❌ ${errorMsg}`); 
+                return; 
+            }
         } catch(e) {
             diagLog(`❌ Error Paso 1: ${e.message}`);
             showMsg(view, 'error', '❌ Error de red al crear billetera. Revisa conexión.');
@@ -617,6 +636,7 @@
         }
 
         if (!uid) return;
+        playBeep();
         statusEl.className = 'status success';
         statusEl.innerText = '📡 Validando acceso...';
 
@@ -1147,7 +1167,7 @@
             const text = await res.text();
             if (!text) {
                 diagLog("❌ Error: Respuesta vacía del servidor.");
-                showMsg(view, 'error', '❌ Esta pulsera no cuenta con un registro válido, se encuentra desactivada, o la tarjeta es incorrecta.');
+                showMsg(view, 'error', '❌ Esta pulsera ya se encuentra registrada en el sistema. Utiliza una pulsera nueva.');
                 return;
             }
 
@@ -1177,7 +1197,12 @@
                 if (activeUid) clearTag();
                 loadHist();
             } else {
-                const errorMsg = result.message || 'Servicio ocupado. Reintente más tarde.';
+                let errorMsg = result.message || 'Servicio ocupado. Reintente más tarde.';
+                if (errorMsg.includes('Unauthorized') || errorMsg.includes('Invalid API Key')) {
+                    errorMsg = action === 'register' 
+                        ? 'Esta pulsera ya se encuentra registrada en el sistema. Utiliza una pulsera nueva.'
+                        : 'Permisos insuficientes o pulsera inválida.';
+                }
                 showMsg(view, 'error', `❌ ${errorMsg}`);
                 diagLog(`❌ Error: ${errorMsg}`);
             }
