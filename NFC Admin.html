@@ -514,53 +514,44 @@
         if (!uid) { showMsg(view, '', 'Operación cancelada.'); return; }
 
         playBeep();
-        showMsg(view, 'success', '📡 Enviando datos al servidor...');
-        diagLog(`🚀 Conectando con register-nfc-pro-v2 (vendor_id=GLOBAL)...`);
 
+        // PASO 1: registrar billetera en nfc_users
+        showMsg(view, 'success', '📡 [1/2] Creando billetera...');
+        diagLog(`🚀 Paso 1: register-nfc-pro-v2 (billetera) para uid=${uid}...`);
         try {
-            const payload = { nfc_uid: uid, nombre: name, vendor_id: 'GLOBAL' };
-            const queryParams = new URLSearchParams(payload).toString();
-            const finalUrl = getN8nUrl('register-nfc-pro-v2') + '&' + queryParams;
-            diagLog(`🔗 Enviando solicitud...`);
-
-            const res = await fetch(finalUrl, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
-            diagLog(`📡 Respuesta: HTTP ${res.status}`);
-
-            if (res.status === 404) {
-                showMsg(view, 'error', '❌ Sistema principal desconectado. Notifica al supervisor.');
-                return;
-            }
-
-            const text = await res.text();
-            if (!text) {
-                showMsg(view, 'error', '❌ Esta pulsera ya está registrada o la tarjeta es incorrecta.');
-                return;
-            }
-
-            let parsed;
-            try { parsed = JSON.parse(text); } catch(e) {
-                diagLog("❌ Error parseando JSON: " + text);
-                showMsg(view, 'error', '❌ Conflicto interno con la transacción. Intenta nuevamente.');
-                return;
-            }
-
-            const result = Array.isArray(parsed) ? parsed[0] : parsed;
-            diagLog(`📦 Respuesta servidor: status="${result.status}" message="${result.message || ''}"`);
-
-            if (result.status === 'success') {
-                showMsg(view, 'success', `✅ ¡Pulsera Global registrada! ${result.saldo_restante != null ? 'Saldo inicial: $' + result.saldo_restante : ''} Dile al portador que pase a la caja de recarga.`);
-                diagLog("✅ Pulsera Global registrada con éxito.");
-                document.getElementById('inp-global-name').value = '';
-                if (activeUid) clearTag();
-            } else {
-                const errorMsg = result.message || 'Servicio ocupado. Reintente más tarde.';
-                showMsg(view, 'error', `❌ ${errorMsg}`);
-                diagLog(`❌ Error: ${errorMsg}`);
-            }
+            const url1 = getN8nUrl('register-nfc-pro-v2') + '&' + new URLSearchParams({ nfc_uid: uid, nombre: name }).toString();
+            const res1 = await fetch(url1, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
+            diagLog(`📡 Paso 1 HTTP: ${res1.status}`);
+            if (res1.status === 404) { showMsg(view, 'error', '❌ Sistema desconectado. Notifica al supervisor.'); return; }
+            const text1 = await res1.text();
+            if (!text1) { showMsg(view, 'error', '❌ Esta pulsera ya existe o es inválida. Revisa con el administrador.'); return; }
+            let parsed1; try { parsed1 = JSON.parse(text1); } catch(e) { showMsg(view, 'error', '❌ Conflicto interno. Intenta nuevamente.'); return; }
+            const r1 = Array.isArray(parsed1) ? parsed1[0] : parsed1;
+            diagLog(`📦 Paso 1: status="${r1.status}"`);
+            if (r1.status !== 'success') { showMsg(view, 'error', `❌ ${r1.message || 'No se pudo crear la billetera.'}`); return; }
         } catch(e) {
-            diagLog(`❌ Error de red: ${e.message}`);
-            showMsg(view, 'error', '❌ Pérdida de comunicación. Revisa el Wifi o datos celulares.');
+            diagLog(`❌ Error Paso 1: ${e.message}`);
+            showMsg(view, 'error', '❌ Error de red al crear billetera. Revisa conexión.');
+            return;
         }
+
+        // PASO 2: marcar como GLOBAL en nfc_vendors
+        showMsg(view, 'success', '📡 [2/2] Marcando tipo GLOBAL...');
+        diagLog(`🚀 Paso 2: register-vendor-pro-v2 (vendor_name=GLOBAL|${name})...`);
+        try {
+            const url2 = getN8nUrl('register-vendor-pro-v2') + '&' + new URLSearchParams({ nfc_uid: uid, vendor_name: `GLOBAL|${name}` }).toString();
+            const res2 = await fetch(url2, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
+            diagLog(`📡 Paso 2 HTTP: ${res2.status}`);
+            const text2 = await res2.text();
+            if (text2) { const r2 = (() => { try { const p = JSON.parse(text2); return Array.isArray(p) ? p[0] : p; } catch(e) { return {}; } })(); diagLog(`📦 Paso 2: status="${r2.status || 'ok'}"`); }
+        } catch(e) {
+            diagLog(`⚠️ Paso 2 advertencia (billetera ya creada): ${e.message}`);
+        }
+
+        showMsg(view, 'success', `✅ ¡Pulsera Global registrada! 🌐 GLOBAL | Portador: ${name}. Pasar a caja de recarga.`);
+        diagLog("✅ Pulsera Global lista: nfc_users (billetera) + nfc_vendors (tipo GLOBAL).");
+        document.getElementById('inp-global-name').value = '';
+        if (activeUid) clearTag();
     }
     // ─────────────────────────────────────────────────────────────────────────────
 
