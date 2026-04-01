@@ -245,10 +245,10 @@
 <!-- PANTALLA DE BLOQUEO (VENDEDOR) -->
 <div id="lock-screen">
     <div style="font-size: 3rem; margin-bottom: 20px;">🔐</div>
-    <h2>Sistema Bloqueado</h2>
-    <p style="color: #9ca3af; margin-bottom: 30px;">Acerca tu Gafete Maestro (Vendedor) para iniciar turno.</p>
-    <button class="btn" style="background: #4f46e5; max-width: 250px;" onclick="authenticateVendor()">📡 Leer Gafete (NFC)</button>
-    <button class="btn" style="background: transparent; color: #6b7280; margin-top: 10px; max-width: 250px; font-size: 0.8rem;" onclick="skipVendor()">Omitir (Modo Un-Cliente)</button>
+    <h2>Acceso Administrativo</h2>
+    <p style="color: #9ca3af; margin-bottom: 8px;">Solo usuarios con pulsera <strong style="color:#7c3aed;">Global</strong> pueden acceder.</p>
+    <p style="color: #9ca3af; margin-bottom: 30px; font-size: 0.85rem;">Acerca tu pulsera NFC Global al dispositivo.</p>
+    <button class="btn" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); max-width: 260px;" onclick="authenticateVendor()">📡 Leer Pulsera Global (NFC)</button>
     <div id="status-lock" class="status" style="margin-top: 20px; max-width: 300px;"></div>
 </div>
 <div class="container">
@@ -556,31 +556,31 @@
     // ─────────────────────────────────────────────────────────────────────────────
 
     function checkVendorLogin() {
-    currentVendorId = 'GLOBAL';
-    currentVendorName = 'Caja General';
-    document.getElementById('lock-screen').style.display = 'none';
-    document.getElementById('vendor-info-badge').style.display = 'inline-block';
-    document.getElementById('v-name').innerText = currentVendorName;
+        const storedId   = localStorage.getItem('vendor_id')   || '';
+        const storedName = localStorage.getItem('vendor_name') || '';
+        const isGlobal   = storedId === 'GLOBAL' || storedName.startsWith('GLOBAL|');
 
-        if (currentVendorId) {
+        if (isGlobal) {
+            currentVendorId   = storedId   || 'GLOBAL';
+            currentVendorName = storedName || 'Admin Global';
             document.getElementById('lock-screen').classList.add('hidden');
+            document.getElementById('lock-screen').style.display = 'none';
             document.getElementById('vendor-info-badge').style.display = 'inline-block';
-            document.getElementById('v-name').innerText = currentVendorName || 'Vend_Activo';
-            diagLog("🔓 Sesión iniciada: " + (currentVendorName || currentVendorId));
+            // Mostrar nombre limpio (sin el prefijo GLOBAL|)
+            const displayName = currentVendorName.startsWith('GLOBAL|')
+                ? '🌐 ' + currentVendorName.replace('GLOBAL|', '')
+                : '🌐 ' + currentVendorName;
+            document.getElementById('v-name').innerText = displayName;
+            diagLog('🔓 Sesión Global activa: ' + currentVendorName);
         } else {
+            currentVendorId   = '';
+            currentVendorName = '';
             document.getElementById('lock-screen').classList.remove('hidden');
+            document.getElementById('lock-screen').style.display = '';
             document.getElementById('vendor-info-badge').style.display = 'none';
         }
     }
 
-    function skipVendor() {
-        currentVendorId = 'GLOBAL';
-        currentVendorName = 'Caja General';
-        localStorage.setItem('vendor_id', currentVendorId);
-        localStorage.setItem('vendor_name', currentVendorName);
-        checkVendorLogin();
-        loadProducts();
-    }
 
     function logoutVendor() {
         if(!confirm("¿Cerrar turno de " + (currentVendorName || 'este stand') + "?")) return;
@@ -597,7 +597,7 @@
         const statusEl = document.getElementById('status-lock');
         statusEl.style.display = 'block';
         statusEl.className = 'status success';
-        statusEl.innerText = '📱 Esperando Gafete...';
+        statusEl.innerText = '📱 Esperando pulsera NFC...';
 
         try {
             if ("NDEFReader" in window) {
@@ -608,17 +608,17 @@
                     ndef.onreading = event => { clearTimeout(timer); resolve(event.serialNumber); };
                 });
             } else {
-                uid = prompt("Simular NFC Gafete:", "gafete-123");
+                uid = prompt("Simular NFC (pulsera Global):", "global-card-1");
             }
         } catch(e) {
             statusEl.className = 'status error';
-            statusEl.innerText = '❌ Error al leer tarjeta.';
+            statusEl.innerText = '❌ Error al leer la pulsera. Intenta de nuevo.';
             return;
         }
 
-        if(!uid) return;
+        if (!uid) return;
         statusEl.className = 'status success';
-        statusEl.innerText = '📡 Validando vendedor...';
+        statusEl.innerText = '📡 Validando acceso...';
 
         try {
             const url = getN8nUrl('vendor-login-pro-v2') + "&nfc_uid=" + encodeURIComponent(uid);
@@ -627,22 +627,32 @@
             const result = Array.isArray(data) ? data[0] : data;
 
             if (result.status === 'success') {
-                statusEl.innerText = '✅ ¡Bienvenido!';
-                currentVendorId = result.vendor_id || uid;
-                currentVendorName = result.vendor_name || 'Stand ID: ' + uid;
-                localStorage.setItem('vendor_id', currentVendorId);
+                const vendorName = result.vendor_name || '';
+                // Solo permitir si el vendor_name comienza con GLOBAL|
+                if (!vendorName.startsWith('GLOBAL|')) {
+                    statusEl.className = 'status error';
+                    statusEl.innerText = '⛔ Acceso denegado. Esta pulsera es de Stand, no de Admin Global.';
+                    diagLog('🚧 Intento de acceso con pulsera Stand: ' + vendorName);
+                    return;
+                }
+                currentVendorId   = result.vendor_id || uid;
+                currentVendorName = vendorName;
+                localStorage.setItem('vendor_id',   currentVendorId);
                 localStorage.setItem('vendor_name', currentVendorName);
+                statusEl.className = 'status success';
+                statusEl.innerText = '✅ ¡Acceso concedido! Bienvenido, ' + vendorName.replace('GLOBAL|', '') + '.';
+                diagLog('🔓 Admin Global autenticado: ' + currentVendorName);
                 setTimeout(() => {
                     checkVendorLogin();
                     loadProducts();
-                }, 800);
+                }, 900);
             } else {
                 statusEl.className = 'status error';
-                statusEl.innerText = '⛔ ' + (result.message || 'Gafete no autorizado');
+                statusEl.innerText = '⛔ ' + (result.message || 'Pulsera no reconocida. Usa una pulsera Global.');
             }
         } catch(e) {
             statusEl.className = 'status error';
-            statusEl.innerText = '❌ Error de red al validar vendedor.';
+            statusEl.innerText = '❌ Error de red. Revisa la conexión.';
         }
     }
 
