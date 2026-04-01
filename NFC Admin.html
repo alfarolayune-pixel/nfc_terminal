@@ -259,12 +259,12 @@
         <div id="vendor-info-badge" class="vendor-badge" style="display:none;" onclick="logoutVendor()">🛒 Stand: <span id="v-name"></span> (Cerrar Turno)</div>
     </div>
     <div class="nav">
-        <div class="nav-item active" onclick="switchTab('sale')">Cobro</div>
+        <div class="nav-item active" onclick="switchTab('reg')">Registrar Cliente</div>
         <div class="nav-item" onclick="switchTab('top')">Saldo</div>
-        <div class="nav-item" onclick="switchTab('reg')">Registrar</div>
+        <div class="nav-item" onclick="switchTab('sale')">Cobro</div>
         <div class="nav-item" onclick="switchTab('adj')">Ajuste</div>
+        <div class="nav-item" onclick="switchTab('global')" style="color: #7c3aed;">🌐 Alta Global</div>
         <div class="nav-item" onclick="switchTab('stands')">Alta Stand</div>
-        <div class="nav-item" onclick="switchTab('global')" style="color: #7c3aed;">🌐 Global</div>
         <div class="nav-item" onclick="switchTab('menu'); loadProdAdmin()">Menú</div>
         <div class="nav-item" onclick="switchTab('hist'); loadHist()">Historial</div>
     </div>
@@ -561,7 +561,7 @@
         const isGlobal   = storedId === 'GLOBAL' || storedName.startsWith('GLOBAL|');
 
         if (isGlobal) {
-            currentVendorId   = storedId   || 'GLOBAL';
+            currentVendorId   = 'GLOBAL';              // Siempre 'GLOBAL', nunca el UID de la pulsera
             currentVendorName = storedName || 'Admin Global';
             document.getElementById('lock-screen').classList.add('hidden');
             document.getElementById('lock-screen').style.display = 'none';
@@ -635,9 +635,9 @@
                     diagLog('🚧 Intento de acceso con pulsera Stand: ' + vendorName);
                     return;
                 }
-                currentVendorId   = result.vendor_id || uid;
+                currentVendorId   = 'GLOBAL';          // Siempre 'GLOBAL', nunca el UID de la pulsera
                 currentVendorName = vendorName;
-                localStorage.setItem('vendor_id',   currentVendorId);
+                localStorage.setItem('vendor_id',   'GLOBAL');
                 localStorage.setItem('vendor_name', currentVendorName);
                 statusEl.className = 'status success';
                 statusEl.innerText = '✅ ¡Acceso concedido! Bienvenido, ' + vendorName.replace('GLOBAL|', '') + '.';
