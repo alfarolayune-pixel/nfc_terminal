@@ -264,6 +264,7 @@
         <div class="nav-item" onclick="switchTab('reg')">Registrar</div>
         <div class="nav-item" onclick="switchTab('adj')">Ajuste</div>
         <div class="nav-item" onclick="switchTab('stands')">Alta Stand</div>
+        <div class="nav-item" onclick="switchTab('global')" style="color: #7c3aed;">🌐 Global</div>
         <div class="nav-item" onclick="switchTab('menu'); loadProdAdmin()">Menú</div>
         <div class="nav-item" onclick="switchTab('hist'); loadHist()">Historial</div>
     </div>
@@ -336,6 +337,30 @@
             </div>
             <button class="btn" onclick="registerVendor()" style="background:#d97706">📝 Asignar Tarjeta Maestra</button>
             <div id="status-stands" class="status"></div>
+        </div>
+
+        <!-- VISTA ALTA GLOBAL -->
+        <div id="view-global" class="view">
+            <!-- Banner informativo -->
+            <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); border-radius: 14px; padding: 18px 16px; margin-bottom: 22px; color: white; box-shadow: 0 4px 15px -3px rgba(124,58,237,0.4);">
+                <div style="font-size: 2rem; margin-bottom: 6px;">🌐</div>
+                <div style="font-weight: 800; font-size: 1.05rem; margin-bottom: 4px;">Pulsera Global</div>
+                <div style="font-size: 0.8rem; opacity: 0.88; line-height: 1.4;">Esta pulsera <strong>no pertenece a ningún stand</strong> específico. Puede utilizarse en cualquier punto de venta del evento sin restricciones.</div>
+            </div>
+            <!-- Badge diferenciador -->
+            <div style="display:flex; align-items:center; gap:8px; background:#ede9fe; border:1px solid #c4b5fd; border-radius:10px; padding:10px 14px; margin-bottom:20px;">
+                <span style="font-size:1.1rem;">🏷️</span>
+                <div>
+                    <div style="font-weight:700; font-size:0.85rem; color:#5b21b6;">Tipo de registro: GLOBAL</div>
+                    <div style="font-size:0.75rem; color:#7c3aed;">Se guardará con vendor_id = GLOBAL en el sistema</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nombre del Portador</label>
+                <input type="text" id="inp-global-name" placeholder="Ej: Staff Entrada / VIP Ana / Organizador">
+            </div>
+            <button class="btn" onclick="executeGlobalRegister()" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); box-shadow: 0 4px 12px -2px rgba(124,58,237,0.35);">🌐 Registrar Pulsera Global</button>
+            <div id="status-global" class="status"></div>
         </div>
 
         <!-- VISTA AJUSTE -->
@@ -446,6 +471,98 @@
             showMsg(view, 'error', '❌ Error de red.');
         }
     }
+
+    // ─── REGISTRO PULSERA GLOBAL ────────────────────────────────────────────────
+    async function executeGlobalRegister() {
+        const name = document.getElementById('inp-global-name').value.trim();
+        const view = 'global';
+        if (!name) { showMsg(view, 'error', '⚠️ Escribe el nombre del portador primero.'); return; }
+
+        let uid = activeUid;
+        diagLog(`🌐 Iniciando registro de Pulsera Global para: "${name}"`);
+
+        if (uid) {
+            diagLog(`⚡ Usando pulsera detectada por URL: ${uid}`);
+        } else {
+            showMsg(view, 'success', '📱 Esperando NFC... Acerque la pulsera al teléfono');
+            try {
+                if ("NDEFReader" in window) {
+                    diagLog("📡 Lector NFC detectado, iniciando escaneo...");
+                    const ndef = new NDEFReader();
+                    await ndef.scan();
+                    uid = await new Promise((resolve, reject) => {
+                        const timer = setTimeout(() => {
+                            diagLog("⚠️ Tiempo de espera NFC agotado.");
+                            reject(new Error("Timeout"));
+                        }, 15000);
+                        ndef.onreading = event => {
+                            clearTimeout(timer);
+                            diagLog("✅ Tag detectado!");
+                            resolve(event.serialNumber);
+                        };
+                    });
+                } else {
+                    diagLog("⚠️ NDEFReader no disponible — usando simulación.");
+                    uid = prompt("Simular NFC ID (Global):", "global-card-1");
+                }
+            } catch(e) {
+                diagLog(`ℹ️ NFC no disponible o cancelado: ${e.message}`);
+                uid = prompt("Fallo NFC — ingresa ID manual:", "global-card-1");
+            }
+        }
+
+        if (!uid) { showMsg(view, '', 'Operación cancelada.'); return; }
+
+        playBeep();
+        showMsg(view, 'success', '📡 Enviando datos al servidor...');
+        diagLog(`🚀 Conectando con register-nfc-pro-v2 (vendor_id=GLOBAL)...`);
+
+        try {
+            const payload = { nfc_uid: uid, nombre: name, vendor_id: 'GLOBAL' };
+            const queryParams = new URLSearchParams(payload).toString();
+            const finalUrl = getN8nUrl('register-nfc-pro-v2') + '&' + queryParams;
+            diagLog(`🔗 Enviando solicitud...`);
+
+            const res = await fetch(finalUrl, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
+            diagLog(`📡 Respuesta: HTTP ${res.status}`);
+
+            if (res.status === 404) {
+                showMsg(view, 'error', '❌ Sistema principal desconectado. Notifica al supervisor.');
+                return;
+            }
+
+            const text = await res.text();
+            if (!text) {
+                showMsg(view, 'error', '❌ Esta pulsera ya está registrada o la tarjeta es incorrecta.');
+                return;
+            }
+
+            let parsed;
+            try { parsed = JSON.parse(text); } catch(e) {
+                diagLog("❌ Error parseando JSON: " + text);
+                showMsg(view, 'error', '❌ Conflicto interno con la transacción. Intenta nuevamente.');
+                return;
+            }
+
+            const result = Array.isArray(parsed) ? parsed[0] : parsed;
+            diagLog(`📦 Respuesta servidor: status="${result.status}" message="${result.message || ''}"`);
+
+            if (result.status === 'success') {
+                showMsg(view, 'success', `✅ ¡Pulsera Global registrada! ${result.saldo_restante != null ? 'Saldo inicial: $' + result.saldo_restante : ''} Dile al portador que pase a la caja de recarga.`);
+                diagLog("✅ Pulsera Global registrada con éxito.");
+                document.getElementById('inp-global-name').value = '';
+                if (activeUid) clearTag();
+            } else {
+                const errorMsg = result.message || 'Servicio ocupado. Reintente más tarde.';
+                showMsg(view, 'error', `❌ ${errorMsg}`);
+                diagLog(`❌ Error: ${errorMsg}`);
+            }
+        } catch(e) {
+            diagLog(`❌ Error de red: ${e.message}`);
+            showMsg(view, 'error', '❌ Pérdida de comunicación. Revisa el Wifi o datos celulares.');
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────────────
 
     function checkVendorLogin() {
     currentVendorId = 'GLOBAL';
